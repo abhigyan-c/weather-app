@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <!-- Include MapMyIndia API script -->
+    <script src="https://apis.mappls.com/advancedmaps/api/8cab3ad33afb4e9d8d0d446f4489c6e6/map_sdk?v=3.0&layer=vector"></script>
+    <!-- Include your custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="map" style="width:100%; height:100vh;"></div>
+    <div id="city-panel" class="panel">
+        <!-- City list with temperature and delete button -->
+        
+    </div>
+
+    <script>
+        // Function to fetch user cities from the backend
+        
+        initMap();
+        function fetchUserCities() {
+            const accessToken = localStorage.getItem('accessToken');
+            if (!accessToken) {
+                console.error('Access token not found');
+                return;
+            }
+            
+
+            fetch('https://abhigyan.pythonanywhere.com/cities', {
+    method: 'GET',
+    headers: {
+        'Authorization': `Bearer ${accessToken}`
+    }
+})
+.then(response => {
+    if (!response.ok) {
+        if (response.status === 401) { // Unauthorized (JWT token expired)
+            window.location.href = 'index.html'; // Redirect to index.html
+        }
+        throw new Error('Network response was not ok');
+    }
+    return response.json();
+})
+.then(data => {
+    console.log(data);
+    cities = data;
+})
+.catch(error => console.error('Error fetching user cities:', error));
+        }
+
+
+        function updateCityPanel(cities) {
+    // Clear previous city list
+    document.getElementById('city-panel').innerHTML = '';
+    console.log(cities);
+    fetch(`https://abhigyan.pythonanywhere.com/weather`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const addbtn = document.createElement('button');
+        addbtn.innerHTML = '<button id = "add-city" onClick=addcity()>Add City</button>'
+        document.getElementById('city-panel').appendChild(addbtn);
+        cities.cities.forEach(city => {
+            const cityElement = document.createElement('div');
+            //console.log(data.weather_data[0].location.name);
+            const weatherForCity = data.weather_data.find(weather => weather.location.name === city.city_name);
+            if (weatherForCity) {
+                cityElement.innerHTML = `
+                    <span onClick="showdetails('${city.city_name}')"><b>${city.city_name}</b></span>
+                    <span>${weatherForCity.current.feelslike_c+"°C"}</span>
+                    <button class="delete-btn" onclick="deleteCity('${city.city_name}')"><i>Delete</i></button>
+                `;
+                // Add thermometer icon based on temperature
+                // You can add temperature data here if needed
+                if(weatherForCity.current.feelslike_c > 40) {
+                    cityElement.innerHTML += '<i style = "color: red">&#127777;</i>';
+                    document.getElementById('city-panel').appendChild(cityElement);
+                }
+                else if(weatherForCity.current.feelslike_c > 28) {
+                    cityElement.innerHTML += '<i style = "color: black">&#127777;</i>';
+                    document.getElementById('city-panel').appendChild(cityElement);
+                }
+                else {
+                    cityElement.innerHTML += '<i style = "color: green">&#127777;</i>';
+                    document.getElementById('city-panel').appendChild(cityElement);
+                }
+            }
+        });
+    });
+}
+
+        function showdetails(city) {
+            localStorage.setItem('currentCity', city);
+            window.location.href = 'city.html';
+        }
+        function addcity() {
+            var city_name = prompt("Enter city name: ")
+            fetch('https://abhigyan.pythonanywhere.com/add_city', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({
+            "city_name": city_name
+        })
+    })
+    .then(function(response) {
+        console.log(response)
+        if (!response.ok) {
+            throw Error(response.statusText);
+        }
+        location.reload()
+    })
+    .catch(function(error) {
+        // Handle errors
+        console.log(error);
+    });
+        }
+
+
+        // Function to delete city
+        function deleteCity(cityName) {
+            fetch(`https://abhigyan.pythonanywhere.com/delete_city/${cityName}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    fetchUserCities(); // Refresh city list after deletion
+                    location.reload();
+                } else {
+                    console.error('Failed to delete city');
+                }
+            })
+            .catch(error => console.error('Error deleting city:', error));
+        }
+
+        // Function to update map markers
+        function updateMapMarkers(cities) {
+            
+        }
+
+
+    
+
+        // Function to initialize MapMyIndia map
+        function initMap() {
+            // Initialize MapMyIndia map
+            
+            //console.log("mapping")
+            var map = new mappls.Map('map', {zoom: 5, center:{lat:28.612964,lng:77.229463}});
+            function fetchAndDisplayCities() {
+            const accessToken = localStorage.getItem('accessToken');
+            if (!accessToken) {
+                console.error('Access token not found');
+                return;
+            }
+            
+
+            fetch('https://abhigyan.pythonanywhere.com/cities', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                //console.log(data)
+                data.cities.forEach(function(city) {
+                    //console.log(city)
+                    var marker = new mappls.Marker({
+                        map: map,
+                        position: {
+                            "lat": city.latitude,
+                            "lng": city.longitude
+                        },
+                        fitbounds: true,
+                        title: city.city_name,
+                        draggable: false,
+                    });
+                });
+                updateCityPanel(data)
+            })
+            //.catch(error => console.error('Error fetching user cities:', error));
+            
+        }  
+        fetchAndDisplayCities();
+        setInterval(fetchAndDisplayCities, 5 * 60 * 1000);
+            
+           
+
+            
+        }
+
+        // Refresh city data every 5 minutes
+        //setInterval(fetchUserCities, 5 * 60 * 1000); // 5 minutes
+        //fetchUserCities()
+    </script>
+</body>
+</html>

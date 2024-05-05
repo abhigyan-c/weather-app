@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Weather</title>
+    <link rel="stylesheet" href="citystyles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 id="city-name">City Weather</h1>
+        <div class="weather-info">
+            <div class="weather-icon">
+                <!-- Icon here -->
+            </div>
+            <div class="temperature" id="temperature">25°C</div>
+            <div class="condition" id="condition">Cloudy</div>
+        </div>
+        <div class="details">
+            <div class="detail">
+                <div class="label">Humidity</div>
+                <div class="value" id="humidity">50%</div>
+            </div>
+            <div class="detail">
+                <div class="label">Wind Speed</div>
+                <div class="value" id="wind-speed">5 km/h</div>
+            </div>
+            <!-- Add more details as needed -->
+        </div>
+    </div>
+    <div style="max-width: 800px; margin: 0 auto;">
+        <canvas id="temperatureChart"></canvas>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+    // Get the current city from localStorage
+    const currentCity = localStorage.getItem('currentCity');
+
+    // Check if the city exists
+    if (currentCity) {
+        // Set the city name
+        document.getElementById('city-name').innerText = currentCity;
+
+        // Fetch weather details for the current city
+        fetchWeather(currentCity);
+    } else {
+        // If the city is not found, display an error message
+        document.getElementById('city-name').innerText = 'City Not Found';
+    }
+});
+
+function fetchWeather(city) {
+    // Make a request to fetch weather details for the given city
+    fetch(`https://abhigyan.pythonanywhere.com/weather`, {
+    method: 'GET',
+    headers: {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+    }
+})
+.then(response => {
+    // Check if the response is successful
+    if (!response.ok) {
+        throw new Error('Failed to fetch weather data');
+    }
+    // Parse the JSON response
+    return response.json();
+})
+.then(data => {
+    // Extract relevant weather details
+    console.log(data.weather_data[0].current);
+    const temperature = data.weather_data[0].current.feelslike_c + '°C';
+    const condition = data.weather_data[0].current.condition.text;
+    const humidity = data.weather_data[0].current.humidity + '%';
+    const windSpeed = data.weather_data[0].current.wind_kph + ' km/h';
+
+    // // Update the HTML elements with the weather details
+    document.getElementById('temperature').innerText = temperature;
+    document.getElementById('condition').innerText = condition;
+    document.getElementById('humidity').innerText = humidity;
+    document.getElementById('wind-speed').innerText = windSpeed;
+})
+.catch(error => {
+    // Display an error message if fetching weather data fails
+    console.error('Error fetching weather data:', error.message);
+});
+
+fetch('https://abhigyan.pythonanywhere.com/historical_temperature', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const historicalData = data.historical_temperature;
+
+            // Aggregate hourly data to daily averages
+            const dailyData = {};
+            historicalData.forEach(entry => {
+                const date = entry.time.split(' ')[0]; // Extract date without time
+                if (!dailyData[date]) {
+                    dailyData[date] = {
+                        count: 0,
+                        sum: 0
+                    };
+                }
+                dailyData[date].count++;
+                dailyData[date].sum += entry.temperature_c;
+            });
+
+            // Calculate daily averages
+            const labels = Object.keys(dailyData);
+            const temperaturesCelsius = Object.values(dailyData).map(daily => daily.sum / daily.count);
+
+            const ctx = document.getElementById('temperatureChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Historical Temperature (°C)',
+                        data: temperaturesCelsius,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching historical temperature data:', error.message);
+        });
+}
+
+    </script>
+</body>
+</html>

@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
-    <!-- Include MapMyIndia API script -->
     <script src="https://apis.mappls.com/advancedmaps/api/8cab3ad33afb4e9d8d0d446f4489c6e6/map_sdk?v=3.0&layer=vector"></script>
-    <!-- Include your custom CSS -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -76,8 +74,7 @@
                     <span>${weatherForCity.current.feelslike_c+"°C"}</span>
                     <button class="delete-btn" onclick="deleteCity('${city.city_name}')"><i>Delete</i></button>
                 `;
-                // Add thermometer icon based on temperature
-                // You can add temperature data here if needed
+                
                 if(weatherForCity.current.feelslike_c > 40) {
                     cityElement.innerHTML += '<i style = "color: red">&#127777;</i>';
                     document.getElementById('city-panel').appendChild(cityElement);
@@ -201,9 +198,6 @@
             
         }
 
-        // Refresh city data every 5 minutes
-        //setInterval(fetchUserCities, 5 * 60 * 1000); // 5 minutes
-        //fetchUserCities()
     </script>
 </body>
 </html>

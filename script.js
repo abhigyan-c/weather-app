@@ -28,10 +28,13 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     })
     .then(function(data) {
         // Redirect to home page on successful login
-        console.log("success")
-        accessToken = data.access_token;
-        localStorage.setItem('accessToken', accessToken);
-        window.location.href = 'home.html';
+        if(data.message !== 'Invalid username or password') {
+            accessToken = data.access_token;
+            localStorage.setItem('accessToken', accessToken);
+            window.location.href = 'home.html';
+        }
+        else
+            throw Error()
     })
     .catch(function(error) {
         // Display error message
